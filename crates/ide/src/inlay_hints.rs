@@ -40,6 +40,7 @@ pub struct InlayHintsConfig {
     pub type_hints: bool,
     pub discriminant_hints: DiscriminantHints,
     pub parameter_hints: bool,
+    pub generic_parameter_hints: GenericParameterHints,
     pub chaining_hints: bool,
     pub adjustment_hints: AdjustmentHints,
     pub adjustment_hints_mode: AdjustmentHintsMode,
@@ -92,6 +93,13 @@ pub enum DiscriminantHints {
     Always,
     Never,
     Fieldless,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GenericParameterHints {
+    Always,
+    Never,
+    ConstOnly,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -447,6 +455,7 @@ fn ty_to_text_edit(
 //
 // * types of local variables
 // * names of function arguments
+// * names of generic parameters
 // * types of chained expressions
 //
 // Optionally, one can enable additional hints for
@@ -454,6 +463,7 @@ fn ty_to_text_edit(
 // * return types of closure expressions
 // * elided lifetimes
 // * compiler inserted reborrows
+// * names of other generic parameters
 //
 // Note: inlay hints for function argument names are heuristically omitted to reduce noise and will not appear if
 // any of the
@@ -543,6 +553,7 @@ fn hints(
     node: SyntaxNode,
 ) {
     closing_brace::hints(hints, sema, config, file_id, node.clone());
+    param_name::generic::hints(hints, sema, config, node.clone());
     match_ast! {
         match node {
             ast::Expr(expr) => {
@@ -645,13 +656,14 @@ mod tests {
     use crate::DiscriminantHints;
     use crate::{fixture, inlay_hints::InlayHintsConfig, LifetimeElisionHints};
 
-    use super::{ClosureReturnTypeHints, InlayFieldsToResolve};
+    use super::{ClosureReturnTypeHints, GenericParameterHints, InlayFieldsToResolve};
 
     pub(super) const DISABLED_CONFIG: InlayHintsConfig = InlayHintsConfig {
         discriminant_hints: DiscriminantHints::Never,
         render_colons: false,
         type_hints: false,
         parameter_hints: false,
+        generic_parameter_hints: GenericParameterHints::Never,
         chaining_hints: false,
         lifetime_elision_hints: LifetimeElisionHints::Never,
         closure_return_type_hints: ClosureReturnTypeHints::Never,

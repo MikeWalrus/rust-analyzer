@@ -131,6 +131,7 @@ impl StaticIndex<'_> {
                     discriminant_hints: crate::DiscriminantHints::Fieldless,
                     type_hints: true,
                     parameter_hints: true,
+                    generic_parameter_hints: crate::GenericParameterHints::ConstOnly,
                     chaining_hints: true,
                     closure_return_type_hints: crate::ClosureReturnTypeHints::WithBlock,
                     lifetime_elision_hints: crate::LifetimeElisionHints::Never,

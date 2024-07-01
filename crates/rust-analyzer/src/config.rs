@@ -509,6 +509,8 @@ config_data! {
         inlayHints_expressionAdjustmentHints_hideOutsideUnsafe: bool = false,
         /// Whether to show inlay hints as postfix ops (`.*` instead of `*`, etc).
         inlayHints_expressionAdjustmentHints_mode: AdjustmentHintsModeDef = AdjustmentHintsModeDef::Prefix,
+        /// Whether to show generic parameter name inlay hints.
+        inlayHints_genericParameterHints_enable: GenericParameterHintsDef = GenericParameterHintsDef::ConstOnly,
         /// Whether to show implicit drop hints.
         inlayHints_implicitDrops_enable: bool                      = false,
         /// Whether to show inlay type hints for elided lifetimes in function signatures.
@@ -1391,6 +1393,11 @@ impl Config {
             render_colons: self.inlayHints_renderColons().to_owned(),
             type_hints: self.inlayHints_typeHints_enable().to_owned(),
             parameter_hints: self.inlayHints_parameterHints_enable().to_owned(),
+            generic_parameter_hints: match self.inlayHints_genericParameterHints_enable() {
+                GenericParameterHintsDef::ConstOnly => ide::GenericParameterHints::ConstOnly,
+                GenericParameterHintsDef::Always => ide::GenericParameterHints::Always,
+                GenericParameterHintsDef::Never => ide::GenericParameterHints::Never,
+            },
             chaining_hints: self.inlayHints_chainingHints_enable().to_owned(),
             discriminant_hints: match self.inlayHints_discriminantHints_enable() {
                 DiscriminantHintsDef::Always => ide::DiscriminantHints::Always,
@@ -2212,6 +2219,18 @@ enum DiscriminantHintsDef {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
+enum GenericParameterHintsDef {
+    ConstOnly,
+    #[serde(with = "true_or_always")]
+    #[serde(untagged)]
+    Always,
+    #[serde(with = "false_or_never")]
+    #[serde(untagged)]
+    Never,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
 enum AdjustmentHintsModeDef {
     Prefix,
     Postfix,
@@ -2872,6 +2891,19 @@ fn field_props(field: &str, ty: &str, doc: &[&str], default: &str) -> serde_json
                 "Always show all discriminant hints.",
                 "Never show discriminant hints.",
                 "Only show discriminant hints on fieldless enum variants."
+            ]
+        },
+        "GenericParameterHintsDef" => set! {
+            "type": "string",
+            "enum": [
+                "always",
+                "never",
+                "const_only"
+            ],
+            "enumDescriptions": [
+                "Always show generic parameter hints.",
+                "Never show generic parameter hints.",
+                "Only show const generic parameter hints."
             ]
         },
         "AdjustmentHintsModeDef" => set! {

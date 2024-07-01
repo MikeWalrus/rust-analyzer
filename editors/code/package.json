@@ -1912,6 +1912,26 @@
             {
                 "title": "inlayHints",
                 "properties": {
+                    "rust-analyzer.inlayHints.genericParameterHints.enable": {
+                        "markdownDescription": "Whether to show generic parameter name inlay hints.",
+                        "default": "const_only",
+                        "type": "string",
+                        "enum": [
+                            "always",
+                            "never",
+                            "const_only"
+                        ],
+                        "enumDescriptions": [
+                            "Always show generic parameter hints.",
+                            "Never show generic parameter hints.",
+                            "Only show const generic parameter hints."
+                        ]
+                    }
+                }
+            },
+            {
+                "title": "inlayHints",
+                "properties": {
                     "rust-analyzer.inlayHints.implicitDrops.enable": {
                         "markdownDescription": "Whether to show implicit drop hints.",
                         "default": false,
