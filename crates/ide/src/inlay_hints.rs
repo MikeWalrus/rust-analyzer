@@ -33,6 +33,7 @@ mod implicit_drop;
 mod implicit_static;
 mod param_name;
 mod range_exclusive;
+mod generic_param;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InlayHintsConfig {
@@ -553,7 +554,7 @@ fn hints(
     node: SyntaxNode,
 ) {
     closing_brace::hints(hints, sema, config, file_id, node.clone());
-    param_name::generic::hints(hints, sema, config, node.clone());
+    generic_param::hints(hints, sema, config, node.clone());
     match_ast! {
         match node {
             ast::Expr(expr) => {

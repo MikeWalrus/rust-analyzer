@@ -14,8 +14,6 @@ use syntax::ast::{self, AstNode, HasArgList, HasName, UnaryOp};
 
 use crate::{InlayHint, InlayHintLabel, InlayHintPosition, InlayHintsConfig, InlayKind};
 
-pub(super) mod generic;
-
 pub(super) fn hints(
     acc: &mut Vec<InlayHint>,
     sema: &Semantics<'_, RootDatabase>,
@@ -66,7 +64,7 @@ pub(super) fn hints(
     Some(())
 }
 
-fn render_label(
+pub(super) fn render_label(
     param_name: impl Display,
     config: &InlayHintsConfig,
     linked_location: Option<FileRange>,
@@ -165,7 +163,7 @@ fn is_argument_expr_similar_to_param_name(argument: &ast::Expr, param_name: &str
 
 /// Check whether param_name and argument are the same or
 /// whether param_name is a prefix/suffix of argument(split at `_`).
-fn is_argument_similar_to_param_name(argument: &str, param_name: &str) -> bool {
+pub(super) fn is_argument_similar_to_param_name(argument: &str, param_name: &str) -> bool {
     // std is honestly too panic happy...
     let str_split_at = |str: &str, at| str.is_char_boundary(at).then(|| argument.split_at(at));
 

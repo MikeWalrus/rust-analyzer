@@ -7,7 +7,7 @@ use syntax::{
 
 use crate::{inlay_hints::GenericParameterHints, InlayHint, InlayHintsConfig, InlayKind};
 
-use super::{is_argument_similar_to_param_name, render_label};
+use super::param_name::{is_argument_similar_to_param_name, render_label};
 
 pub(crate) fn hints(
     acc: &mut Vec<InlayHint>,
