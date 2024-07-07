@@ -29,11 +29,11 @@ mod closure_captures;
 mod closure_ret;
 mod discriminant;
 mod fn_lifetime_fn;
+mod generic_param;
 mod implicit_drop;
 mod implicit_static;
 mod param_name;
 mod range_exclusive;
-mod generic_param;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InlayHintsConfig {
@@ -554,7 +554,9 @@ fn hints(
     node: SyntaxNode,
 ) {
     closing_brace::hints(hints, sema, config, file_id, node.clone());
-    generic_param::hints(hints, sema, config, node.clone());
+    if let Some(any_has_generic_args) = ast::AnyHasGenericArgs::cast(node.clone()) {
+        generic_param::hints(hints, sema, config, any_has_generic_args);
+    }
     match_ast! {
         match node {
             ast::Expr(expr) => {

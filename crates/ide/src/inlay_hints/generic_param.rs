@@ -1,8 +1,8 @@
 //! Implementation of inlay hints for generic parameters.
 use ide_db::{active_parameter::generic_def_for_node, RootDatabase};
 use syntax::{
-    ast::{self, HasName},
-    AstNode, SyntaxNode,
+    ast::{self, AnyHasGenericArgs, HasGenericArgs, HasName},
+    AstNode,
 };
 
 use crate::{inlay_hints::GenericParameterHints, InlayHint, InlayHintsConfig, InlayKind};
@@ -13,7 +13,7 @@ pub(crate) fn hints(
     acc: &mut Vec<InlayHint>,
     sema: &hir::Semantics<'_, RootDatabase>,
     config: &InlayHintsConfig,
-    node: SyntaxNode,
+    node: AnyHasGenericArgs,
 ) -> Option<()> {
     if matches!(config.generic_parameter_hints, GenericParameterHints::Never) {
         return None;
@@ -22,76 +22,76 @@ pub(crate) fn hints(
     let const_generics_only =
         matches!(config.generic_parameter_hints, GenericParameterHints::ConstOnly);
 
-    if let Some(generic_arg_list) = ast::GenericArgList::cast(node.clone()) {
-        let (generic_def, _, _, _) =
-            generic_def_for_node(sema, &generic_arg_list, &node.first_token()?)?;
+    let generic_arg_list = node.generic_arg_list()?;
 
-        let mut args = generic_arg_list.generic_args().peekable();
-        let start_with_lifetime = matches!(args.peek()?, ast::GenericArg::LifetimeArg(_));
-        let params = generic_def.params(sema.db).into_iter().filter(|p| {
-            if let hir::GenericParam::TypeParam(it) = p {
-                if it.is_implicit(sema.db) {
-                    return false;
-                }
+    let (generic_def, _, _, _) =
+        generic_def_for_node(sema, &generic_arg_list, &node.syntax().first_token()?)?;
+
+    let mut args = generic_arg_list.generic_args().peekable();
+    let start_with_lifetime = matches!(args.peek()?, ast::GenericArg::LifetimeArg(_));
+    let params = generic_def.params(sema.db).into_iter().filter(|p| {
+        if let hir::GenericParam::TypeParam(it) = p {
+            if it.is_implicit(sema.db) {
+                return false;
             }
-            if !start_with_lifetime {
-                return !matches!(p, hir::GenericParam::LifetimeParam(_));
-            }
-            true
-        });
+        }
+        if !start_with_lifetime {
+            return !matches!(p, hir::GenericParam::LifetimeParam(_));
+        }
+        true
+    });
 
-        let hints = params.zip(args).filter_map(|(param, arg)| {
-            if matches!(arg, ast::GenericArg::AssocTypeArg(_)) {
-                return None;
-            }
-            let source_syntax = match param {
-                hir::GenericParam::TypeParam(it) => {
-                    if const_generics_only {
-                        return None;
-                    }
-                    sema.source(it.merge())?.value.syntax().clone()
+    let hints = params.zip(args).filter_map(|(param, arg)| {
+        if matches!(arg, ast::GenericArg::AssocTypeArg(_)) {
+            return None;
+        }
+        let source_syntax = match param {
+            hir::GenericParam::TypeParam(it) => {
+                if const_generics_only {
+                    return None;
                 }
-                hir::GenericParam::ConstParam(it) => {
-                    let syntax = sema.source(it.merge())?.value.syntax().clone();
-                    let const_param = ast::ConstParam::cast(syntax)?;
-                    const_param.name()?.syntax().clone()
-                }
-                hir::GenericParam::LifetimeParam(it) => {
-                    if const_generics_only {
-                        return None;
-                    }
-                    sema.source(it)?.value.syntax().clone()
-                }
-            };
-
-            let name = param.name(sema.db);
-            let param_name = name.as_str()?;
-
-            let should_hide = {
-                let argument = get_string_representation(&arg)?;
-                is_argument_similar_to_param_name(&argument, param_name)
-            };
-
-            if should_hide {
-                return None;
+                sema.source(it.merge())?.value.syntax().clone()
             }
+            hir::GenericParam::ConstParam(it) => {
+                let syntax = sema.source(it.merge())?.value.syntax().clone();
+                let const_param = ast::ConstParam::cast(syntax)?;
+                const_param.name()?.syntax().clone()
+            }
+            hir::GenericParam::LifetimeParam(it) => {
+                if const_generics_only {
+                    return None;
+                }
+                sema.source(it)?.value.syntax().clone()
+            }
+        };
 
-            let linked_location = sema.original_range_opt(&source_syntax);
-            let label = render_label(param_name, config, linked_location);
-            Some(InlayHint {
-                range: sema.original_range_opt(arg.syntax())?.range,
-                position: crate::InlayHintPosition::Before,
-                pad_left: false,
-                pad_right: true,
-                kind: InlayKind::Parameter,
-                label,
-                text_edit: None,
-            })
-        });
+        let name = param.name(sema.db);
+        let param_name = name.as_str()?;
 
-        acc.extend(hints);
-        return Some(());
-    }
+        let should_hide = {
+            let argument = get_string_representation(&arg)?;
+            is_argument_similar_to_param_name(&argument, param_name)
+        };
+
+        if should_hide {
+            return None;
+        }
+
+        let linked_location = sema.original_range_opt(&source_syntax);
+        let label = render_label(param_name, config, linked_location);
+        Some(InlayHint {
+            range: sema.original_range_opt(arg.syntax())?.range,
+            position: crate::InlayHintPosition::Before,
+            pad_left: false,
+            pad_right: true,
+            kind: InlayKind::Parameter,
+            label,
+            text_edit: None,
+        })
+    });
+
+    acc.extend(hints);
+    return Some(());
     None
 }
 
