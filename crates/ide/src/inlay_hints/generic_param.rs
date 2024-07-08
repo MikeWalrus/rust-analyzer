@@ -61,13 +61,13 @@ pub(crate) fn hints(
 
         let source_syntax = match param {
             hir::GenericParam::TypeParam(it) => {
-                if !type_hints {
+                if !type_hints || !matches!(arg, ast::GenericArg::TypeArg(_)) {
                     return None;
                 }
                 sema.source(it.merge())?.value.syntax().clone()
             }
             hir::GenericParam::ConstParam(it) => {
-                if !const_hints {
+                if !const_hints || !matches!(arg, ast::GenericArg::ConstArg(_)) {
                     return None;
                 }
                 let syntax = sema.source(it.merge())?.value.syntax().clone();
@@ -75,7 +75,7 @@ pub(crate) fn hints(
                 const_param.name()?.syntax().clone()
             }
             hir::GenericParam::LifetimeParam(it) => {
-                if !lifetime_hints {
+                if !lifetime_hints || !matches!(arg, ast::GenericArg::LifetimeArg(_)) {
                     return None;
                 }
                 sema.source(it)?.value.syntax().clone()
@@ -285,7 +285,9 @@ fn foo() -> impl Trait<i32, Assoc1 = u32, Assoc2 = u32> {}
     fn hide_similar() {
         generic_param_name_hints_always(
             r#"
-struct A<'a, X, const N: usize> {}
+struct A<'a, X, const N: usize> {
+    x: &'a [X; N],
+}
 
 const N: usize = 3;
 
@@ -294,6 +296,19 @@ mod m {
 }
 
 fn foo<'a>(a: A<'a, m::X, N>) {}
+"#,
+        )
+    }
+
+    #[test]
+    fn mismatching_args() {
+        generic_param_name_hints_always(
+            r#"
+struct A<X, const N: usize> {
+    x: [X; N]
+}
+
+type InvalidType = A<3, i32>;
 "#,
         )
     }
