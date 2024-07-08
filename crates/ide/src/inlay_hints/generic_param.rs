@@ -45,6 +45,21 @@ pub(crate) fn hints(
         if matches!(arg, ast::GenericArg::AssocTypeArg(_)) {
             return None;
         }
+
+        let name = param.name(sema.db);
+        let param_name = name.as_str()?;
+
+        let should_hide = {
+            let argument = get_string_representation(&arg)?;
+            is_argument_similar_to_param_name(&argument, param_name)
+        };
+
+        if should_hide {
+            return None;
+        }
+
+        let range = sema.original_range_opt(arg.syntax())?.range;
+
         let source_syntax = match param {
             hir::GenericParam::TypeParam(it) => {
                 if const_generics_only {
@@ -64,35 +79,22 @@ pub(crate) fn hints(
                 sema.source(it)?.value.syntax().clone()
             }
         };
-
-        let name = param.name(sema.db);
-        let param_name = name.as_str()?;
-
-        let should_hide = {
-            let argument = get_string_representation(&arg)?;
-            is_argument_similar_to_param_name(&argument, param_name)
-        };
-
-        if should_hide {
-            return None;
-        }
-
         let linked_location = sema.original_range_opt(&source_syntax);
         let label = render_label(param_name, config, linked_location);
+
         Some(InlayHint {
-            range: sema.original_range_opt(arg.syntax())?.range,
+            range,
             position: crate::InlayHintPosition::Before,
             pad_left: false,
             pad_right: true,
-            kind: InlayKind::Parameter,
+            kind: InlayKind::GenericParamter,
             label,
             text_edit: None,
         })
     });
 
     acc.extend(hints);
-    return Some(());
-    None
+    Some(())
 }
 
 fn get_string_representation(arg: &ast::GenericArg) -> Option<String> {

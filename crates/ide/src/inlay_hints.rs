@@ -136,6 +136,7 @@ pub enum InlayKind {
     GenericParamList,
     Lifetime,
     Parameter,
+    GenericParamter,
     Type,
     Drop,
     RangeExclusive,
