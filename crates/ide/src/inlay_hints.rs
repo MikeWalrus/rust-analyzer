@@ -97,10 +97,10 @@ pub enum DiscriminantHints {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GenericParameterHints {
-    Always,
-    Never,
-    ConstOnly,
+pub struct GenericParameterHints {
+    pub type_hints: bool,
+    pub lifetime_hints: bool,
+    pub const_hints: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -457,7 +457,7 @@ fn ty_to_text_edit(
 //
 // * types of local variables
 // * names of function arguments
-// * names of generic parameters
+// * names of const generic parameters
 // * types of chained expressions
 //
 // Optionally, one can enable additional hints for
@@ -465,7 +465,7 @@ fn ty_to_text_edit(
 // * return types of closure expressions
 // * elided lifetimes
 // * compiler inserted reborrows
-// * names of other generic parameters
+// * names of generic type and lifetime parameters
 //
 // Note: inlay hints for function argument names are heuristically omitted to reduce noise and will not appear if
 // any of the
@@ -667,7 +667,11 @@ mod tests {
         render_colons: false,
         type_hints: false,
         parameter_hints: false,
-        generic_parameter_hints: GenericParameterHints::Never,
+        generic_parameter_hints: GenericParameterHints {
+            type_hints: false,
+            lifetime_hints: false,
+            const_hints: false,
+        },
         chaining_hints: false,
         lifetime_elision_hints: LifetimeElisionHints::Never,
         closure_return_type_hints: ClosureReturnTypeHints::Never,

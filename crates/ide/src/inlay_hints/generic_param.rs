@@ -15,12 +15,11 @@ pub(crate) fn hints(
     config: &InlayHintsConfig,
     node: AnyHasGenericArgs,
 ) -> Option<()> {
-    if matches!(config.generic_parameter_hints, GenericParameterHints::Never) {
+    let GenericParameterHints { type_hints, lifetime_hints, const_hints } =
+        config.generic_parameter_hints;
+    if !(type_hints || lifetime_hints || const_hints) {
         return None;
     }
-
-    let const_generics_only =
-        matches!(config.generic_parameter_hints, GenericParameterHints::ConstOnly);
 
     let generic_arg_list = node.generic_arg_list()?;
 
@@ -62,18 +61,21 @@ pub(crate) fn hints(
 
         let source_syntax = match param {
             hir::GenericParam::TypeParam(it) => {
-                if const_generics_only {
+                if !type_hints {
                     return None;
                 }
                 sema.source(it.merge())?.value.syntax().clone()
             }
             hir::GenericParam::ConstParam(it) => {
+                if !const_hints {
+                    return None;
+                }
                 let syntax = sema.source(it.merge())?.value.syntax().clone();
                 let const_param = ast::ConstParam::cast(syntax)?;
                 const_param.name()?.syntax().clone()
             }
             hir::GenericParam::LifetimeParam(it) => {
-                if const_generics_only {
+                if !lifetime_hints {
                     return None;
                 }
                 sema.source(it)?.value.syntax().clone()
@@ -142,7 +144,11 @@ mod tests {
     fn generic_param_name_hints_always(ra_fixture: &str) {
         check_with_config(
             InlayHintsConfig {
-                generic_parameter_hints: GenericParameterHints::Always,
+                generic_parameter_hints: GenericParameterHints {
+                    type_hints: true,
+                    lifetime_hints: true,
+                    const_hints: true,
+                },
                 ..DISABLED_CONFIG
             },
             ra_fixture,
@@ -153,7 +159,11 @@ mod tests {
     fn generic_param_name_hints_const_only(ra_fixture: &str) {
         check_with_config(
             InlayHintsConfig {
-                generic_parameter_hints: GenericParameterHints::ConstOnly,
+                generic_parameter_hints: GenericParameterHints {
+                    type_hints: false,
+                    lifetime_hints: false,
+                    const_hints: true,
+                },
                 ..DISABLED_CONFIG
             },
             ra_fixture,
